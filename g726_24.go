@@ -2,9 +2,9 @@ package g726
 
 type g726_param_24 struct {
 	qtab_723_24 [3]int
-	_dqlntab    [8]int16
-	_witab      [8]int16
-	_fitab      [8]int16
+	_dqlntab    [8]int
+	_witab      [8]int
+	_fitab      [8]int
 }
 
 var p24 g726_param_24
@@ -16,17 +16,17 @@ func init() {
 	 * Maps G.723_24 code word to reconstructed scale factor normalized log
 	 * magnitude values.
 	 */
-	p24._dqlntab = [8]int16{-2048, 135, 273, 373, 373, 273, 135, -2048}
+	p24._dqlntab = [8]int{-2048, 135, 273, 373, 373, 273, 135, -2048}
 
 	/* Maps G.723_24 code word to log of scale factor multiplier. */
-	p24._witab = [8]int16{-128, 960, 4384, 18624, 18624, 4384, 960, -128}
+	p24._witab = [8]int{-128, 960, 4384, 18624, 18624, 4384, 960, -128}
 
 	/*
 	 * Maps G.723_24 code words to a set of values whose long and short
 	 * term averages are computed and then compared to give an indication
 	 * how stationary (steady state) the signal is.
 	 */
-	p24._fitab = [8]int16{0, 0x200, 0x400, 0xE00, 0xE00, 0x400, 0x200, 0}
+	p24._fitab = [8]int{0, 0x200, 0x400, 0xE00, 0xE00, 0x400, 0x200, 0}
 }
 
 func (state_ptr *G726_state) g726_24_encoder(sl int) int {

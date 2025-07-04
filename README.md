@@ -1,9 +1,11 @@
 ### G726 编解码
 
+源(C语言) [canbus/pcm_adpcm_g726](https://github.com/canbus/pcm_adpcm_g726)
+
 
 - [ ] 40kbps
 - [x] 32kbps
-- [ ] 24kbps
+- [x] 24kbps
 - [x] 16kbps
 
 
@@ -13,61 +15,58 @@
 package main
 
 import (
-	"fmt"
-	"log"
-	"os"
-
 	"github.com/general252/g726"
+	"os"
 )
 
 func main() {
-	log.SetFlags(log.Lshortfile | log.LstdFlags)
-
 	pcmIn, err := os.ReadFile("audio-samples.pcm")
 	if err != nil {
-		fmt.Println(err)
 		return
 	}
 
-	pcmOut, err := encodeAndDecode(g726.G726Rate32kbps, pcmIn)
-	if err != nil {
-		fmt.Println(err)
+	if pcmOut, err := recode(g726.G726Rate32kbps, pcmIn);err != nil {
 		return
 	} else {
 		_ = os.WriteFile("audio-samples-re-32kbps.pcm", pcmOut, 0644)
 	}
 
-	pcmOut, err = encodeAndDecode(g726.G726Rate16kbps, pcmIn)
-	if err != nil {
-		fmt.Println(err)
+	if pcmOut, err := recode(g726.G726Rate16kbps, pcmIn);err != nil {
 		return
 	} else {
 		_ = os.WriteFile("audio-samples-re-16kbps.pcm", pcmOut, 0644)
 	}
 }
 
-func encodeAndDecode(rate g726.G726Rate, pcm []byte) ([]byte, error) {
+// 编码为指定码率的g726后, 再解码为pcm原始数据
+func recode(rate g726.G726Rate, pcm []byte) ([]byte, error) {
 	encoder := g726.G726_init_state(rate)
 	g726Data, err := encoder.EncodeSimple(pcm)
 	if err != nil {
-		fmt.Println(err)
 		return nil, err
 	}
 
 	decoder := g726.G726_init_state(rate)
-	out, err := decoder.DecodeSimple(g726Data)
+	outPCM, err := decoder.DecodeSimple(g726Data)
 	if err != nil {
-		fmt.Println(err)
 		return nil, err
 	}
 
-	return out, nil
+	return outPCM, nil
 }
 
 ```
 
 
-### 
+### 测试
+
+原始音频数据
 ![source](img/audio-samples.jpg)
+
+32kbps 压缩后的音频数据
 ![32kbps](img/audio-samples-re-32kbps.jpg)
+
+16kbps 压缩后的音频数据
 ![16kbps](img/audio-samples-re-16kbps.jpg)
+
+  

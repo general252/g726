@@ -2,9 +2,9 @@ package g726
 
 type g726_param_16 struct {
 	qtab_723_16 [1]int
-	_dqlntab    [4]int16
-	_witab      [4]int16
-	_fitab      [4]int16
+	_dqlntab    [4]int
+	_witab      [4]int
+	_fitab      [4]int
 }
 
 var p16 g726_param_16
@@ -16,14 +16,14 @@ func init() {
 	 * Maps G.723_16 code word to reconstructed scale factor normalized log
 	 * magnitude values.  Comes from Table 11/G.726
 	 */
-	p16._dqlntab = [4]int16{116, 365, 365, 116}
+	p16._dqlntab = [4]int{116, 365, 365, 116}
 
 	/* Maps G.723_16 code word to log of scale factor multiplier.
 	 *
 	 * _witab[4] is actually {-22 , 439, 439, -22}, but FILTD wants it
 	 * as WI << 5  (multiplied by 32), so we'll do that here
 	 */
-	p16._witab = [4]int16{-704, 14048, 14048, -704}
+	p16._witab = [4]int{-704, 14048, 14048, -704}
 
 	/*
 	 * Maps G.723_16 code words to a set of values whose long and short
@@ -32,7 +32,7 @@ func init() {
 	 */
 
 	/* Comes from FUNCTF */
-	p16._fitab = [4]int16{0, 0xE00, 0xE00, 0}
+	p16._fitab = [4]int{0, 0xE00, 0xE00, 0}
 }
 
 func (state_ptr *G726_state) g726_16_encoder(sl int) int {
