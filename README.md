@@ -1,9 +1,10 @@
 ### G726 编解码
 
-源(C语言) [canbus/pcm_adpcm_g726](https://github.com/canbus/pcm_adpcm_g726)
+参考  
+> [canbus/pcm_adpcm_g726](https://github.com/canbus/pcm_adpcm_g726)  
+> [ffmpeg G726](https://github.com/FFmpeg/FFmpeg/blob/master/libavcodec/g726.c)  
 
-
-- [ ] 40kbps
+- [x] 40kbps
 - [x] 32kbps
 - [x] 24kbps
 - [x] 16kbps

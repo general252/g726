@@ -27,7 +27,8 @@ ffplay -f g726le -ar 8000 -ac 1 -code_size 4 -i audio-samples-32kbps.g726
 4. -code_size #采样宽度 取值范围 2~5 分别代表 16kbps 24kbps 32kbps 40kbps
 
 
-####
+#### pcm g726 互转
 ```bash
 ffmpeg -f s16le -ar 8000 -ac 1 -i audio-samples.pcm -acodec g726 -b:a 32k -f g726 audio-samples-32kbps-ffmpeg.g726
+ffmpeg -f g726le -ar 8000 -ac 1 -code_size 4 -i out.g726 -ar 8000 -ac 1 -acodec pcm_s16le -f s16le out.pcm
 ```
