@@ -1,15 +1,3 @@
-### G726 编解码
-
-
-- [ ] 40kbps
-- [x] 32kbps
-- [ ] 24kbps
-- [x] 16kbps
-
-
-
-### 示例
-```go
 package main
 
 import (
@@ -63,11 +51,3 @@ func encodeAndDecode(rate g726.G726Rate, pcm []byte) ([]byte, error) {
 
 	return out, nil
 }
-
-```
-
-
-### 
-![source](img/audio-samples.jpg)
-![32kbps](img/audio-samples-re-32kbps.jpg)
-![16kbps](img/audio-samples-re-16kbps.jpg)
