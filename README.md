@@ -1,10 +1,10 @@
 ### G726 编解码
 
 参考  
-> [spandsp](https://github.com/freeswitch/spandsp/blob/master/src/g726.c) 
-> [soft-switch](https://www.soft-switch.org/downloads/)
-> [canbus/pcm_adpcm_g726](https://github.com/canbus/pcm_adpcm_g726)  
-> [ffmpeg G726](https://github.com/FFmpeg/FFmpeg/blob/master/libavcodec/g726.c)  
+> [spandsp](https://github.com/freeswitch/spandsp/blob/master/src/g726.c)  
+> [soft-switch](https://www.soft-switch.org/downloads/)  
+> [canbus/pcm_adpcm_g726](https://github.com/canbus/pcm_adpcm_g726)    
+> [ffmpeg G726](https://github.com/FFmpeg/FFmpeg/blob/master/libavcodec/g726.c)    
 
 - [x] 40kbps
 - [x] 32kbps

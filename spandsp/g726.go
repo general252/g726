@@ -280,7 +280,7 @@ func quantize(d int_t, y int_t, table []int_t, quantizer_states int_t) int_t {
 func reconstruct(
 	sign int_t, /* 0 for non-negative value */
 	dqln int_t, /* G.72x codeword */
-	y int_t,    /* Step size multiplier */
+	y int_t, /* Step size multiplier */
 ) int_t {
 	var dql int_t /* Log of 'dq' magnitude */
 	var dex int_t /* Integer part of log */
@@ -559,9 +559,9 @@ func (s *g726_state_t) update(y, wi, fi, dq, sr, dqsez int_t) {
 
 func tandem_adjust_alaw(
 	sr int16_t, /* decoder output linear PCM sample */
-	se int_t,   /* predictor estimate sample */
-	y int_t,    /* quantizer step size */
-	i int_t,    /* decoder input code */
+	se int_t, /* predictor estimate sample */
+	y int_t, /* quantizer step size */
+	i int_t, /* decoder input code */
 	sign int_t,
 	qtab []int_t,
 	quantizer_states int_t,
@@ -628,9 +628,9 @@ func tandem_adjust_alaw(
 
 func tandem_adjust_ulaw(
 	sr int16_t, /* decoder output linear PCM sample */
-	se int_t,   /* predictor estimate sample */
-	y int_t,    /* quantizer step size */
-	i int_t,    /* decoder input code */
+	se int_t, /* predictor estimate sample */
+	y int_t, /* quantizer step size */
+	i int_t, /* decoder input code */
 	sign int_t,
 	qtab []int_t,
 	quantizer_states int_t,
@@ -1302,7 +1302,7 @@ type (
 
 type IntValue interface {
 	~int | ~int8 | ~int16 | ~int32 | ~int64 |
-	~uint | ~uint8 | ~uint16 | ~uint32 | ~uint64
+		~uint | ~uint8 | ~uint16 | ~uint32 | ~uint64
 }
 
 func overflow[T IntValue](v T) int_t {
