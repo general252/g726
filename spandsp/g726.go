@@ -575,7 +575,7 @@ func tandem_adjust_alaw(
 		sr = -1
 	}
 
-	sp = int_t(linear_to_alaw((int32_t(sr) >> 1) << 3))
+	sp = int_t(linear_to_alaw((sr >> 1) << 3))
 	/* 16-bit prediction error */
 	dx = int_t(alaw_to_linear(uint8_t(sp)))>>2 - se
 	id = quantize(dx, y, qtab, quantizer_states)
@@ -1066,9 +1066,8 @@ func (s *g726_state_t) Decode(g726_data []uint8_t) (amp []int16_t) {
 
 		sl = s.dec_func(code)
 		if s.ext_coding != G726_ENCODING_LINEAR {
-			// TODO:
-			// amp[samples] = (uint8_t) sl;
-			// samples+=1
+			amp[samples] = sl
+			samples += 1
 		} else {
 			// amp[samples] = sl
 			amp = append(amp, sl)

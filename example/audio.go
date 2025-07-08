@@ -17,10 +17,11 @@ func main() {
 		return
 	}
 
+	var packing = g726.PackingRight
 	for i := 0; i <= 3; i++ {
-		var rate = g726.G726Rate(i)
+		var rate = g726.Rate(i)
 
-		pcmOut, g726Data, err := encodeAndDecode(rate, pcmIn)
+		pcmOut, g726Data, err := encodeAndDecode(rate, packing, pcmIn)
 		if err != nil {
 			log.Println(err)
 			return
@@ -36,37 +37,12 @@ func main() {
 	}
 }
 
-func encodeAndDecode(rate g726.G726Rate, pcm []byte) (pcmOut, g726Data []byte, err error) {
-	var s int
-	switch rate {
-	case g726.G726Rate16kbps:
-		s = 4
-	case g726.G726Rate24kbps:
-		s = 8
-	case g726.G726Rate32kbps:
-		s = 2
-	case g726.G726Rate40kbps:
-		s = 8
-	default:
-		return nil, nil, fmt.Errorf("invalid rate")
-	}
+func encodeAndDecode(rate g726.Rate, packing g726.PackingType, pcm []byte) (pcmOut, g726Data []byte, err error) {
+	encoder := g726.G726_init_state(rate, packing)
+	g726Data = encoder.EncodeV2(encoder.Pcm8ToPcm16(pcm))
 
-	s *= 2
-	pcm = pcm[:len(pcm)/s*s]
+	decoder := g726.G726_init_state(rate, packing)
+	out := decoder.DecodeV2(g726Data)
 
-	encoder := g726.G726_init_state(rate)
-	g726Data, err = encoder.EncodeSimple(pcm)
-	if err != nil {
-		log.Println(err, rate, len(pcm))
-		return nil, nil, err
-	}
-
-	decoder := g726.G726_init_state(rate)
-	out, err := decoder.DecodeSimple(g726Data)
-	if err != nil {
-		log.Println(err, rate, len(g726Data))
-		return nil, nil, err
-	}
-
-	return out, g726Data, nil
+	return decoder.Pcm16ToPcm8(out), g726Data, nil
 }

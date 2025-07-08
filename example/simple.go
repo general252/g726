@@ -15,21 +15,13 @@ func main() {
 		pcm_in[i] = -0x7800
 	}
 
-	var rate = g726.G726Rate32kbps
+	var rate = g726.Rate32kbps
 
-	encoder := g726.G726_init_state(rate)
-	bitstream, err := encoder.Encode(pcm_in)
-	if err != nil {
-		fmt.Println(err)
-		return
-	}
+	encoder := g726.G726_init_state(rate, g726.PackingRight)
+	g726Data := encoder.EncodeV2(pcm_in)
 
-	decoder := g726.G726_init_state(rate)
-	pcm_out, err := decoder.Decode(bitstream)
-	if err != nil {
-		fmt.Println(err)
-		return
-	}
+	decoder := g726.G726_init_state(rate, g726.PackingRight)
+	pcm_out := decoder.DecodeV2(g726Data)
 
 	for i := 0; i < len(pcm_out); i++ {
 		cin := int(pcm_in[i])

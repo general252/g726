@@ -21,10 +21,16 @@ type G726_state struct {
 	 * format. */
 	td int /* delayed tone detect, new in 1988 version */
 
-	rate G726Rate
+	rate            Rate
+	packing         PackingType
+	bs              bitstream_state_t
+	bits_per_sample int32
+
+	fun_encoder func(int) int
+	fun_decoder func(int) int
 }
 
-func G726_init_state(rate G726Rate) *G726_state {
+func G726_init_state(rate Rate, packing PackingType) *G726_state {
 	var state_ptr = &G726_state{
 		yl:  34816,
 		yu:  544,
@@ -38,8 +44,35 @@ func G726_init_state(rate G726Rate) *G726_state {
 		sr:  [2]int{32, 32},
 		td:  0,
 
-		rate: rate,
+		rate:    rate,
+		packing: packing,
+		bs: bitstream_state_t{
+			bitstream: 0,
+			residue:   0,
+		},
 	}
+
+	switch rate {
+	case Rate16kbps:
+		state_ptr.bits_per_sample = 2
+		state_ptr.fun_encoder = state_ptr.g726_16_encoder
+		state_ptr.fun_decoder = state_ptr.g726_16_decoder
+	case Rate24kbps:
+		state_ptr.bits_per_sample = 3
+		state_ptr.fun_encoder = state_ptr.g726_24_encoder
+		state_ptr.fun_decoder = state_ptr.g726_24_decoder
+	case Rate32kbps:
+		state_ptr.bits_per_sample = 4
+		state_ptr.fun_encoder = state_ptr.g726_32_encoder
+		state_ptr.fun_decoder = state_ptr.g726_32_decoder
+	case Rate40kbps:
+		state_ptr.bits_per_sample = 5
+		state_ptr.fun_encoder = state_ptr.g726_40_encoder
+		state_ptr.fun_decoder = state_ptr.g726_40_decoder
+	default:
+		panic("invalid rate")
+	}
+
 	return state_ptr
 }
 
@@ -374,6 +407,11 @@ func fmult(an, srn int) int {
 	return IfElse((an^srn) < 0, -retval, retval)
 }
 
+type bitstream_state_t struct {
+	bitstream uint32
+	residue   int32
+}
+
 func IfElse[T any](b bool, t, f T) T {
 	if b {
 		return t
@@ -384,8 +422,8 @@ func IfElse[T any](b bool, t, f T) T {
 
 type Compare interface {
 	~int | ~int8 | ~int16 | ~int32 | ~int64 |
-		~uint | ~uint8 | ~uint16 | ~uint32 | ~uint64 |
-		~float32 | ~float64
+	~uint | ~uint8 | ~uint16 | ~uint32 | ~uint64 |
+	~float32 | ~float64
 }
 
 func ABS[T Compare](a T) T {

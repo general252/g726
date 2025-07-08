@@ -127,35 +127,36 @@ func ulaw_to_linear(ulaw uint8_t) int16_t {
 // Encode a linear sample to A-law
 // param linear The sample to encode.
 // return The A-law value.
-func linear_to_alaw(linear int32_t) uint8_t {
+func linear_to_alaw(linear int16_t) uint8_t {
 	var a_val uint8_t
 	var mask int32_t
 	var seg int32_t
+	var linear_val = int32_t(linear)
 
-	if linear >= 0 {
+	if linear_val >= 0 {
 		/* Sign (bit 7) bit = 1 */
 		mask = 0x80 | G711_ALAW_AMI_MASK
 	} else {
 		/* Sign (bit 7) bit = 0 */
 		mask = G711_ALAW_AMI_MASK
-		linear = -linear - 1
+		linear_val = -linear_val - 1
 	}
 
 	/* Convert the scaled magnitude to segment number. */
-	seg = int32_t(top_bit(uint32_t(linear|0xFF)) - 7)
+	seg = int32_t(top_bit(uint32_t(linear_val|0xFF)) - 7)
 	if seg >= 8 {
 		a_val = (uint8_t)(0x7F ^ mask)
 	} else {
 		/* Combine the sign, segment, and quantization bits. */
-		// a_val = (uint8_t) (((seg << 4) | ((linear >> ((seg)  ?  (seg + 3)  :  4)) & 0x0F)) ^ mask);
-		var value = seg
+		// a_val = (uint8_t) (((seg << 4) | ((linear_val >> ((seg)  ?  (seg + 3)  :  4)) & 0x0F)) ^ mask);
+		var value int32_t = seg
 		if seg != 0 {
 			value = seg + 3
 		} else {
 			value = 4
 		}
 
-		a_val = (uint8_t)(((seg << 4) | ((linear >> value) & 0x0F)) ^ mask)
+		a_val = (uint8_t)(((seg << 4) | ((linear_val >> value) & 0x0F)) ^ mask)
 	}
 	return a_val
 }
@@ -268,7 +269,7 @@ func (s *g711_state_s) g711_encode(amp []int16_t) (g711_data []uint8_t) {
 	switch s.mode {
 	case G711_ALAW:
 		for i = 0; i < len(amp); i++ {
-			g711_data[i] = linear_to_alaw(int32_t(amp[i]))
+			g711_data[i] = linear_to_alaw(int16_t(amp[i]))
 		}
 	case G711_ULAW:
 		for i = 0; i < len(amp); i++ {
