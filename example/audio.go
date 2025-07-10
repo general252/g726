@@ -11,7 +11,7 @@ import (
 func main() {
 	log.SetFlags(log.Lshortfile | log.LstdFlags)
 
-	pcmIn, err := os.ReadFile("audio-samples.pcm")
+	pcmIn, err := os.ReadFile("./example/audio-samples.pcm")
 	if err != nil {
 		log.Println(err)
 		return
@@ -25,8 +25,8 @@ func main() {
 			log.Println(err)
 			return
 		} else {
-			filenamePCM := fmt.Sprintf("audio-samples-re-%vkbps.pcm", (i+2)*8)
-			filenameG726 := fmt.Sprintf("audio-samples-%vkbps.g726", (i+2)*8)
+			filenamePCM := fmt.Sprintf("./example/audio-samples-re-%vkbps.pcm", (i+2)*8)
+			filenameG726 := fmt.Sprintf("./example/audio-samples-%vkbps.g726", (i+2)*8)
 			log.Println(rate, filenamePCM, filenameG726)
 
 			_ = os.WriteFile(filenamePCM, pcmOut, 0644)

@@ -3,6 +3,7 @@ package g726
 import (
 	"encoding/binary"
 	"fmt"
+	"unsafe"
 )
 
 type G726Rate int
@@ -29,43 +30,90 @@ func (r G726Rate) String() string {
 	}
 }
 
-func (state_ptr *G726_state) Encode(pcm []int16) ([]byte, error) {
+func (state_ptr *G726_state) DecodeFrameSize(bytesSize int) (int, error) {
 	switch state_ptr.rate {
 	case G726Rate16kbps:
-		input_len := len(pcm)
-		if input_len%4 != 0 {
-			return nil, fmt.Errorf("input length must be a multiple of 4 for 16kbps encoding")
+		return bytesSize * 8, nil
+	case G726Rate24kbps:
+		if bytesSize%3 != 0 {
+			return -1, fmt.Errorf("input length must be multiple of 3 for 24kbps decoding")
+		}
+		return (bytesSize * 8 / 3) * 2, nil
+	case G726Rate32kbps:
+		return bytesSize * 2 * 2, nil
+	case G726Rate40kbps:
+		if bytesSize%5 != 0 {
+			return -1, fmt.Errorf("input length must be multiple of 5 for 40kbps decoding")
+		}
+		return (bytesSize * 8 / 5) * 2, nil
+	default:
+		return -1, fmt.Errorf("invalid rate")
+	}
+}
+
+func (state_ptr *G726_state) EncodeFrameSize(bytesSize int) (int, error) {
+	switch state_ptr.rate {
+	case G726Rate16kbps:
+		if bytesSize%8 != 0 {
+			return -1, fmt.Errorf("input length must be a multiple of 4 for 16kbps encoding")
 		}
 
-		var out = make([]byte, 0, input_len/4)
-		for i := 0; i < input_len; i += 4 {
-			a := state_ptr.g726_16_encoder(int(pcm[i+0]))
-			b := state_ptr.g726_16_encoder(int(pcm[i+1]))
-			c := state_ptr.g726_16_encoder(int(pcm[i+2]))
-			d := state_ptr.g726_16_encoder(int(pcm[i+3]))
+		return bytesSize / 8, nil
+	case G726Rate24kbps:
+		if bytesSize%16 != 0 {
+			return -1, fmt.Errorf("input length must be a multiple of 8 for 24kbps encoding")
+		}
+		return bytesSize / 16 * 3, nil
+	case G726Rate32kbps:
+		if bytesSize%4 != 0 {
+			return -1, fmt.Errorf("input length must be a multiple of 2 for 32kbps encoding")
+		}
+
+		return bytesSize / 4, nil
+	case G726Rate40kbps:
+		if bytesSize%16 != 0 {
+			return -1, fmt.Errorf("input length must be a multiple of 8 for 40kbps encoding")
+		}
+		return bytesSize / 10 * 8, nil
+	}
+
+	return -1, fmt.Errorf("invalid rate")
+}
+
+func (state_ptr *G726_state) EncodeToBytes(pcm []byte, pkt []byte) (int, error) {
+	length := len(pcm)
+	size, err := state_ptr.EncodeFrameSize(length)
+	if err != nil {
+		return -1, err
+	}
+
+	_ = pkt[size-1]
+	var n int
+	switch state_ptr.rate {
+	case G726Rate16kbps:
+		state := G726_state{}
+		for i := 0; i < length; i += 8 {
+			a := state.g726_16_encoder(int(int16(binary.LittleEndian.Uint16(pcm[i:]))))
+			b := state.g726_16_encoder(int(int16(binary.LittleEndian.Uint16(pcm[i+2:]))))
+			c := state.g726_16_encoder(int(int16(binary.LittleEndian.Uint16(pcm[i+4:]))))
+			d := state.g726_16_encoder(int(int16(binary.LittleEndian.Uint16(pcm[i+6:]))))
 
 			// 4b -> 1b
 			v := byte((a << 6) | (b << 4) | (c << 2) | d)
-			out = append(out, v)
+			pkt[n] = v
+			n++
 		}
-		return out, nil
+		break
 	case G726Rate24kbps:
-		input_len := len(pcm)
-		if input_len%8 != 0 {
-			return nil, fmt.Errorf("input length must be multiple of 8 for 24kbps encoding")
-		}
-
-		out := make([]byte, 0, input_len/8*3)
-
-		for i := 0; i < input_len; i += 8 {
-			s0 := state_ptr.g726_24_encoder(int(pcm[i]))
-			s1 := state_ptr.g726_24_encoder(int(pcm[i+1]))
-			s2 := state_ptr.g726_24_encoder(int(pcm[i+2]))
-			s3 := state_ptr.g726_24_encoder(int(pcm[i+3]))
-			s4 := state_ptr.g726_24_encoder(int(pcm[i+4]))
-			s5 := state_ptr.g726_24_encoder(int(pcm[i+5]))
-			s6 := state_ptr.g726_24_encoder(int(pcm[i+6]))
-			s7 := state_ptr.g726_24_encoder(int(pcm[i+7]))
+		for i := 0; i < length; i += 16 {
+			s0 := state_ptr.g726_24_encoder(int(int16(binary.LittleEndian.Uint16(pcm[i:]))))
+			s1 := state_ptr.g726_24_encoder(int(int16(binary.LittleEndian.Uint16(pcm[i+2:]))))
+			s2 := state_ptr.g726_24_encoder(int(int16(binary.LittleEndian.Uint16(pcm[i+4:]))))
+			s3 := state_ptr.g726_24_encoder(int(int16(binary.LittleEndian.Uint16(pcm[i+6:]))))
+			s4 := state_ptr.g726_24_encoder(int(int16(binary.LittleEndian.Uint16(pcm[i+8:]))))
+			s5 := state_ptr.g726_24_encoder(int(int16(binary.LittleEndian.Uint16(pcm[i+10:]))))
+			s6 := state_ptr.g726_24_encoder(int(int16(binary.LittleEndian.Uint16(pcm[i+12:]))))
+			s7 := state_ptr.g726_24_encoder(int(int16(binary.LittleEndian.Uint16(pcm[i+14:]))))
 
 			// 打包8个3位值到3个字节
 			// 8b -> 3b
@@ -73,43 +121,31 @@ func (state_ptr *G726_state) Encode(pcm []int16) ([]byte, error) {
 			b1 := byte((s2&1)<<7) | byte(s3<<4) | byte(s4<<1) | byte(s5>>2)
 			b2 := byte((s5&3)<<6) | byte(s6<<3) | byte(s7)
 
-			out = append(out, b0, b1, b2)
+			pkt[n] = b0
+			pkt[n+1] = b1
+			pkt[n+2] = b2
+			n += 3
 		}
-		return out, nil
+		break
 	case G726Rate32kbps:
-		input_len := len(pcm)
-		if input_len%2 != 0 {
-			return nil, fmt.Errorf("input length must be a multiple of 2 for 32kbps encoding")
-		}
-
-		var out = make([]byte, 0, input_len/2)
-		for i := 0; i < input_len; i += 2 {
-			a := state_ptr.g726_32_encoder(int(pcm[i+0]))
-			b := state_ptr.g726_32_encoder(int(pcm[i+1]))
-
+		for i := 0; i < length; i += 4 {
+			a := state_ptr.g726_32_encoder(int(int16(binary.LittleEndian.Uint16(pcm[i:]))))
+			b := state_ptr.g726_32_encoder(int(int16(binary.LittleEndian.Uint16(pcm[i+2:]))))
 			// 2b -> 1b
-			out = append(out, byte((a<<4)|b))
+			pkt[n] = byte((a << 4) | b)
+			n++
 		}
-		return out, nil
+		break
 	case G726Rate40kbps:
-		input_len := len(pcm)
-		if input_len%8 != 0 {
-			return nil, fmt.Errorf("input length must be multiple of 8 for 40kbps encoding")
-		}
-
-		out_len := input_len * 5 / 8
-		out := make([]byte, 0, out_len)
-
-		for i := 0; i < input_len; i += 8 {
-			s0 := state_ptr.g726_40_encoder(int(pcm[i]))
-			s1 := state_ptr.g726_40_encoder(int(pcm[i+1]))
-			s2 := state_ptr.g726_40_encoder(int(pcm[i+2]))
-			s3 := state_ptr.g726_40_encoder(int(pcm[i+3]))
-			s4 := state_ptr.g726_40_encoder(int(pcm[i+4]))
-			s5 := state_ptr.g726_40_encoder(int(pcm[i+5]))
-			s6 := state_ptr.g726_40_encoder(int(pcm[i+6]))
-			s7 := state_ptr.g726_40_encoder(int(pcm[i+7]))
-
+		for i := 0; i < length; i += 16 {
+			s0 := state_ptr.g726_40_encoder(int(int16(binary.LittleEndian.Uint16(pcm[i:]))))
+			s1 := state_ptr.g726_40_encoder(int(int16(binary.LittleEndian.Uint16(pcm[i+2:]))))
+			s2 := state_ptr.g726_40_encoder(int(int16(binary.LittleEndian.Uint16(pcm[i+4:]))))
+			s3 := state_ptr.g726_40_encoder(int(int16(binary.LittleEndian.Uint16(pcm[i+6:]))))
+			s4 := state_ptr.g726_40_encoder(int(int16(binary.LittleEndian.Uint16(pcm[i+8:]))))
+			s5 := state_ptr.g726_40_encoder(int(int16(binary.LittleEndian.Uint16(pcm[i+10:]))))
+			s6 := state_ptr.g726_40_encoder(int(int16(binary.LittleEndian.Uint16(pcm[i+12:]))))
+			s7 := state_ptr.g726_40_encoder(int(int16(binary.LittleEndian.Uint16(pcm[i+14:]))))
 			// 将8个5位值打包成5个字节
 			b0 := byte((s0 << 3) | (s1 >> 2))
 			b1 := byte(((s1 & 0x03) << 6) | (s2 << 1) | (s3 >> 4))
@@ -117,42 +153,63 @@ func (state_ptr *G726_state) Encode(pcm []int16) ([]byte, error) {
 			b3 := byte(((s4 & 0x01) << 7) | (s5 << 2) | (s6 >> 3))
 			b4 := byte(((s6 & 0x07) << 5) | s7)
 
-			out = append(out, b0, b1, b2, b3, b4)
+			pkt[n] = b0
+			pkt[n+1] = b1
+			pkt[n+2] = b2
+			pkt[n+3] = b3
+			pkt[n+4] = b4
+			n += 5
 		}
-		return out, nil
-	default:
-		return nil, fmt.Errorf("invalid rate")
+		break
 	}
 
+	return n, nil
 }
 
-func (state_ptr *G726_state) Decode(bitstream []byte) ([]int16, error) {
+func (state_ptr *G726_state) Encode(pcm []int16) ([]byte, error) {
+	size, err := state_ptr.EncodeFrameSize(len(pcm) * 2)
+	if err != nil {
+		return nil, err
+	}
+
+	pcmBytes := make([]byte, len(pcm)*2)
+	for i, v := range pcm {
+		binary.LittleEndian.PutUint16(pcmBytes[i*2:], uint16(v))
+	}
+
+	pkt := make([]byte, size)
+	n, err := state_ptr.EncodeToBytes(pcmBytes, pkt)
+	if err != nil {
+		return nil, err
+	}
+
+	return pkt[:n], nil
+}
+
+func (state_ptr *G726_state) DecodeToBytes(bitstream []byte, pcm []byte) (int, error) {
+	input_len := len(bitstream)
+	pcmSize, err := state_ptr.DecodeFrameSize(input_len)
+	if err != nil {
+		return -1, err
+	}
+
+	_ = pcm[pcmSize-1]
+
 	switch state_ptr.rate {
 	case G726Rate16kbps:
-		input_len := len(bitstream)
-
-		var out = make([]int16, 0, input_len*4)
 		for i := 0; i < input_len; i++ {
 			a := (bitstream[i] & byte(192)) >> 6
 			b := (bitstream[i] & byte(48)) >> 4
 			c := (bitstream[i] & byte(12)) >> 2
 			d := (bitstream[i] & byte(3)) >> 0
 
-			out = append(out, int16(state_ptr.g726_16_decoder(int(a))))
-			out = append(out, int16(state_ptr.g726_16_decoder(int(b))))
-			out = append(out, int16(state_ptr.g726_16_decoder(int(c))))
-			out = append(out, int16(state_ptr.g726_16_decoder(int(d))))
+			binary.LittleEndian.PutUint16(pcm[i*8:], uint16(state_ptr.g726_16_decoder(int(a))))
+			binary.LittleEndian.PutUint16(pcm[i*8+2:], uint16(state_ptr.g726_16_decoder(int(b))))
+			binary.LittleEndian.PutUint16(pcm[i*8+4:], uint16(state_ptr.g726_16_decoder(int(c))))
+			binary.LittleEndian.PutUint16(pcm[i*8+6:], uint16(state_ptr.g726_16_decoder(int(d))))
 		}
-		return out, nil
+		return pcmSize, nil
 	case G726Rate24kbps:
-		input_len := len(bitstream)
-		if input_len%3 != 0 {
-			return nil, fmt.Errorf("input length must be multiple of 3 for 24kbps decoding")
-		}
-
-		out_len := input_len * 8 / 3
-		out := make([]int16, 0, out_len)
-
 		for i := 0; i < input_len; i += 3 {
 			b0 := bitstream[i]
 			b1 := bitstream[i+1]
@@ -167,37 +224,27 @@ func (state_ptr *G726_state) Decode(bitstream []byte) ([]int16, error) {
 			s6 := (b2 & 0x38) >> 3
 			s7 := (b2 & 0x07) >> 0
 
-			out = append(out, int16(state_ptr.g726_24_decoder(int(s0))))
-			out = append(out, int16(state_ptr.g726_24_decoder(int(s1))))
-			out = append(out, int16(state_ptr.g726_24_decoder(int(s2))))
-			out = append(out, int16(state_ptr.g726_24_decoder(int(s3))))
-			out = append(out, int16(state_ptr.g726_24_decoder(int(s4))))
-			out = append(out, int16(state_ptr.g726_24_decoder(int(s5))))
-			out = append(out, int16(state_ptr.g726_24_decoder(int(s6))))
-			out = append(out, int16(state_ptr.g726_24_decoder(int(s7))))
+			n := i / 3 * 16
+			binary.LittleEndian.PutUint16(pcm[n:], uint16(state_ptr.g726_24_decoder(int(s0))))
+			binary.LittleEndian.PutUint16(pcm[n+2:], uint16(state_ptr.g726_24_decoder(int(s1))))
+			binary.LittleEndian.PutUint16(pcm[n+4:], uint16(state_ptr.g726_24_decoder(int(s2))))
+			binary.LittleEndian.PutUint16(pcm[n+6:], uint16(state_ptr.g726_24_decoder(int(s3))))
+			binary.LittleEndian.PutUint16(pcm[n+8:], uint16(state_ptr.g726_24_decoder(int(s4))))
+			binary.LittleEndian.PutUint16(pcm[n+10:], uint16(state_ptr.g726_24_decoder(int(s5))))
+			binary.LittleEndian.PutUint16(pcm[n+12:], uint16(state_ptr.g726_24_decoder(int(s6))))
+			binary.LittleEndian.PutUint16(pcm[n+14:], uint16(state_ptr.g726_24_decoder(int(s7))))
 		}
-		return out, nil
+		return pcmSize, nil
 	case G726Rate32kbps:
-		input_len := len(bitstream)
-
-		var out = make([]int16, 0, input_len*2)
 		for i := 0; i < input_len; i++ {
 			a := (bitstream[i] & byte(240)) >> 4
 			b := (bitstream[i] & byte(15)) >> 0
-
-			out = append(out, int16(state_ptr.g726_32_decoder(int(a))))
-			out = append(out, int16(state_ptr.g726_32_decoder(int(b))))
+			binary.LittleEndian.PutUint16(pcm[i*4:], uint16(state_ptr.g726_32_decoder(int(a))))
+			binary.LittleEndian.PutUint16(pcm[i*4+2:], uint16(state_ptr.g726_32_decoder(int(b))))
 		}
-		return out, nil
+
+		return pcmSize, nil
 	case G726Rate40kbps:
-		input_len := len(bitstream)
-		if input_len%5 != 0 {
-			return nil, fmt.Errorf("input length must be multiple of 5 for 40kbps decoding")
-		}
-
-		out_len := input_len * 8 / 5
-		out := make([]int16, 0, out_len)
-
 		for i := 0; i < input_len; i += 5 {
 			b0 := bitstream[i]
 			b1 := bitstream[i+1]
@@ -215,19 +262,37 @@ func (state_ptr *G726_state) Decode(bitstream []byte) ([]int16, error) {
 			s6 := ((b3 & 0x03) << 3) | ((b4 & 0xE0) >> 5)
 			s7 := (b4 & 0x1F) >> 0
 
-			out = append(out, int16(state_ptr.g726_40_decoder(int(s0))))
-			out = append(out, int16(state_ptr.g726_40_decoder(int(s1))))
-			out = append(out, int16(state_ptr.g726_40_decoder(int(s2))))
-			out = append(out, int16(state_ptr.g726_40_decoder(int(s3))))
-			out = append(out, int16(state_ptr.g726_40_decoder(int(s4))))
-			out = append(out, int16(state_ptr.g726_40_decoder(int(s5))))
-			out = append(out, int16(state_ptr.g726_40_decoder(int(s6))))
-			out = append(out, int16(state_ptr.g726_40_decoder(int(s7))))
+			n := i / 5 * 16
+			binary.LittleEndian.PutUint16(pcm[n:], uint16(state_ptr.g726_40_decoder(int(s0))))
+			binary.LittleEndian.PutUint16(pcm[n+2:], uint16(state_ptr.g726_40_decoder(int(s1))))
+			binary.LittleEndian.PutUint16(pcm[n+4:], uint16(state_ptr.g726_40_decoder(int(s2))))
+			binary.LittleEndian.PutUint16(pcm[n+6:], uint16(state_ptr.g726_40_decoder(int(s3))))
+			binary.LittleEndian.PutUint16(pcm[n+8:], uint16(state_ptr.g726_40_decoder(int(s4))))
+			binary.LittleEndian.PutUint16(pcm[n+10:], uint16(state_ptr.g726_40_decoder(int(s5))))
+			binary.LittleEndian.PutUint16(pcm[n+12:], uint16(state_ptr.g726_40_decoder(int(s6))))
+			binary.LittleEndian.PutUint16(pcm[n+14:], uint16(state_ptr.g726_40_decoder(int(s7))))
 		}
-		return out, nil
+		return pcmSize, nil
 	default:
-		return nil, fmt.Errorf("invalid rate")
+		return -1, fmt.Errorf("invalid rate")
 	}
+}
+
+func (state_ptr *G726_state) Decode(bitstream []byte) ([]int16, error) {
+	size, err := state_ptr.DecodeFrameSize(len(bitstream))
+	if err != nil {
+		return nil, err
+	} else if size%2 != 0 {
+		panic("input length must be even")
+	}
+
+	pcmData := make([]byte, size)
+	_, err = state_ptr.DecodeToBytes(bitstream, pcmData)
+	if err != nil {
+		return nil, err
+	}
+
+	return (*[1 << 30]int16)(unsafe.Pointer(&pcmData[0]))[: size/2 : size/2], nil
 }
 
 func (state_ptr *G726_state) EncodeSimple(pcm []byte) ([]byte, error) {
@@ -235,13 +300,7 @@ func (state_ptr *G726_state) EncodeSimple(pcm []byte) ([]byte, error) {
 		return nil, fmt.Errorf("pcm length must be even")
 	}
 
-	pcm_in := make([]int16, len(pcm)/2)
-	for i := 0; i < len(pcm_in); i++ {
-		// 每2字节组合为一个int16
-		pcm_in[i] = int16(binary.LittleEndian.Uint16(pcm[2*i : 2*i+2]))
-	}
-
-	return state_ptr.Encode(pcm_in)
+	return state_ptr.Encode((*[1 << 30]int16)(unsafe.Pointer(&pcm[0]))[: len(pcm)/2 : len(pcm)/2])
 }
 
 func (state_ptr *G726_state) DecodeSimple(bitstream []byte) ([]byte, error) {
