@@ -316,8 +316,8 @@ func (state_ptr *G726_state) DecodeSimple(bitstream []byte) ([]byte, error) {
 	return pcm, nil
 }
 
-// 计算G726音频的比特率
-func guessG726BitRate(frameSize int, duration int) (G726Rate, error) {
+// GuessBitRate 根据帧长和时长, 计算G726音频的比特率
+func GuessBitRate(frameSize int, duration int) (G726Rate, error) {
 	bitRate := frameSize / duration * 1000 * 8
 	if bitRate <= 16000 {
 		return G726Rate16kbps, nil
