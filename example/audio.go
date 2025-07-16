@@ -5,7 +5,7 @@ import (
 	"log"
 	"os"
 
-	"github.com/general252/g726"
+	"github.com/lkmio/g726"
 )
 
 func main() {
